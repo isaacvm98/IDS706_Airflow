@@ -62,7 +62,11 @@ docker-compose up -d --build
 
 ```
 Download CIRT → PySpark Merge → Upload PostgreSQL → Analyze & Model → Cleanup
+
+
 ```
+
+![alt text](image.png)
 
 ### Tasks
 1. **Download CIRT** - Fannie Mae API (~1.5GB)
