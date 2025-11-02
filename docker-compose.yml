@@ -2,7 +2,10 @@ version: '3.8'
 
 x-airflow-common:
   &airflow-common
-  image: apache/airflow:2.8.1-python3.11
+  # BUILD from Dockerfile instead of using base image
+  build:
+    context: .
+    dockerfile: Dockerfile
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -32,6 +35,11 @@ x-airflow-common:
     
     # Python path
     PYTHONPATH: /opt/airflow
+    
+    # PySpark configuration
+    SPARK_HOME: /home/airflow/.local/lib/python3.11/site-packages/pyspark
+
+    BASE_64_AUTH: ${BASE_64_AUTH}
     
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
@@ -76,7 +84,7 @@ services:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 2
       start_period: 30s
     restart: always
     depends_on:
@@ -92,7 +100,7 @@ services:
       test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
       interval: 30s
       timeout: 10s
-      retries: 5
+      retries: 2
       start_period: 30s
     restart: always
     depends_on:
@@ -133,6 +141,5 @@ services:
       - bash
       - -c
       - airflow
-
 volumes:
   postgres-db-volume:

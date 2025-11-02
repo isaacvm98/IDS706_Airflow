@@ -1,32 +1,31 @@
 """
-Download VantageScore Test Data from Fannie Mae API
-Simple version - just downloads the small test dataset
+Data Ingestion Functions
+Download data from Fannie Mae API
 """
 
 import requests
-import os
 import zipfile
 from io import BytesIO
-import logging
+from pathlib import Path
+import os
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+BASE_64_AUTH = os.environ['BASE_64_AUTH']
 
-# Fannie Mae API credentials
-CLIENT_ID = "b847d8cb-7f95-47c4-b547-3512af9cf0e1"
-CLIENT_SECRET = "AsebVRBeyGfg2frKwNqDmd_k00KsF1nz27Ngo.oBbjmC7cs8Vsy_NnzeYGieXfhP"
-BASE_64_AUTH = "Yjg0N2Q4Y2ItN2Y5NS00N2M0LWI1NDctMzUxMmFmOWNmMGUxOkFzZWJWUkJleUdmZzJmckt3TnFEbWRfazAwS3NGMW56MjdOZ28ub0Jiam1DN2NzOFZzeV9ObnplWUdpZVhmaFA="
-AUTH_URL = "https://auth.pingone.com/4c2b23f9-52b1-4f8f-aa1f-1d477590770c/as/token"
-DATA_URL = "https://api.fanniemae.com/v1/credit-insurance-risk-transfer/current-reporting-period"
-
-
-def download_vantagescore(output_path):
-    """Download VantageScore test data"""
+def download_cirt(output_path):
+    """
+    Download CIRT data from Fannie Mae API
     
-    logger.info("Downloading VantageScore test data...")
+    Args:
+        output_path: Path to save CIRT CSV file
     
-    # Step 1: Get token
-    logger.info("1. Getting access token...")
+    Returns:
+        str: Path to downloaded file
+    """
+    # Fannie Mae API credentials
+    AUTH_URL = "https://auth.pingone.com/4c2b23f9-52b1-4f8f-aa1f-1d477590770c/as/token"
+    DATA_URL = "https://api.fanniemae.com/v1/credit-insurance-risk-transfer/current-reporting-period"
+    
+    print("Step 1: Getting access token...")
     headers = {
         "Authorization": f"Basic {BASE_64_AUTH}",
         "Content-Type": "application/x-www-form-urlencoded"
@@ -35,10 +34,9 @@ def download_vantagescore(output_path):
     response = requests.post(AUTH_URL, headers=headers, 
                             data={"grant_type": "client_credentials"})
     access_token = response.json()["access_token"]
-    logger.info("   ✓ Token obtained")
+    print("✓ Token obtained")
     
-    # Step 2: Get data URL
-    logger.info("2. Requesting data...")
+    print("Step 2: Requesting data...")
     headers = {
         "x-public-access-token": access_token,
         "Content-Type": "application/json"
@@ -46,44 +44,38 @@ def download_vantagescore(output_path):
     
     response = requests.get(DATA_URL, headers=headers)
     s3_uri = response.json()['s3Uri']
-    logger.info(f"   ✓ Data URL: {s3_uri}")
+    print(f"✓ Data URL: {s3_uri}")
     
-    # Step 3: Download and extract ZIP
-    logger.info("3. Downloading ZIP file...")
+    print("Step 3: Downloading and extracting ZIP...")
     zip_response = requests.get(s3_uri)
     
-    extract_dir = os.path.dirname(output_path)
-    os.makedirs(extract_dir, exist_ok=True)
+    extract_dir = Path(output_path).parent
+    extract_dir.mkdir(parents=True, exist_ok=True)
     
     with zipfile.ZipFile(BytesIO(zip_response.content)) as z:
-        logger.info("   Files in ZIP:")
+        print("Files in ZIP:")
         for name in z.namelist():
-            logger.info(f"     - {name}")
+            print(f"  - {name}")
         
-        # Extract all
+        # Extract all files
         z.extractall(extract_dir)
         
-        # Find VantageScore file
-        vs_file = [f for f in z.namelist() if 'VantageScore' in f][0]
-        vs_path = os.path.join(extract_dir, vs_file)
+        # Find CIRT file
+        cirt_files = [f for f in z.namelist() if f.endswith('.csv') or 'CIRT' in f]
         
-        # Rename to expected name
-        if vs_path != output_path:
-            os.rename(vs_path, output_path)
-    
-    # Quick stats
-    with open(output_path, 'r') as f:
-        lines = sum(1 for _ in f)
-    
-    logger.info(f"   ✓ Downloaded: {lines:,} records")
-    logger.info(f"   ✓ Saved to: {output_path}")
+        if cirt_files:
+            cirt_file = cirt_files[0]
+            cirt_path = os.path.join(extract_dir, cirt_file)
+            
+            # Rename to expected name
+            if cirt_path != output_path:
+                os.rename(cirt_path, output_path)
+            
+            print(f"✓ Downloaded CIRT to: {output_path}")
+        else:
+            print("Available files:")
+            for f in z.namelist():
+                print(f"  - {f}")
+            raise ValueError("Could not find CIRT CSV file in ZIP")
     
     return output_path
-
-
-if __name__ == "__main__":
-    import sys
-    output = sys.argv[1] if len(sys.argv) > 1 else "data/raw/vantagescore_test.txt"
-    
-    result = download_vantagescore(output)
-    print(f"\n✓ Success! {result}")

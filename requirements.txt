@@ -10,7 +10,7 @@ fastparquet==2024.2.0
 
 # Database
 psycopg2-binary==2.9.9
-SQLAlchemy==2.0.25
+SQLAlchemy
 
 # Machine Learning
 scikit-learn==1.3.2
@@ -21,7 +21,6 @@ matplotlib==3.8.2
 seaborn==0.13.1
 plotly==5.18.0
 
-# PySpark (Super Bonus)
 pyspark==3.5.0
 
 # HTTP Requests
@@ -31,6 +30,7 @@ urllib3==2.1.0
 # Utilities
 python-dotenv==1.0.0
 tqdm==4.66.1
+openpyxl
 
 # Testing
 pytest==7.4.3
