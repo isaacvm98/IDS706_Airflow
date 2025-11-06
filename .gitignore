@@ -34,7 +34,6 @@ unittests.cfg
 data/raw/*
 data/processed/*
 data/final/*
-data/outputs/*
 !data/.gitkeep
 !data/raw/.gitkeep
 !data/processed/.gitkeep
